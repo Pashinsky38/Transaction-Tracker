@@ -10,15 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -26,9 +18,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.example.transactiontracker.databinding.ActivityMainBinding;
+import com.example.transactiontracker.databinding.DialogAddTransactionBinding;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,11 +30,9 @@ import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements TransactionAdapter.OnTransactionClickListener {
-    private RecyclerView recyclerView;
+    private ActivityMainBinding binding;
     private TransactionAdapter adapter;
     private DatabaseHelper dbHelper;
-    private TextView balanceText;
-    private FloatingActionButton fabAdd;
     private List<Uri> selectedImages;
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
@@ -50,7 +40,8 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         dbHelper = new DatabaseHelper(this);
         selectedImages = new ArrayList<>();
@@ -69,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
                     if (isGranted) {
                         openImagePicker();
                     } else {
-                        Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.permission_denied, Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -90,54 +81,45 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
     }
 
     private void initViews() {
-        balanceText = findViewById(R.id.balanceText);
-        recyclerView = findViewById(R.id.recyclerView);
-        fabAdd = findViewById(R.id.fabAdd);
-
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TransactionAdapter(new ArrayList<>(), this);
-        recyclerView.setAdapter(adapter);
+        binding.recyclerView.setAdapter(adapter);
 
-        fabAdd.setOnClickListener(v -> showAddTransactionDialog());
+        binding.fabAdd.setOnClickListener(v -> showAddTransactionDialog());
     }
 
     private void showAddTransactionDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_transaction, null);
-        builder.setView(dialogView);
+        DialogAddTransactionBinding dialogBinding = DialogAddTransactionBinding.inflate(
+                LayoutInflater.from(this)
+        );
+        builder.setView(dialogBinding.getRoot());
 
-        EditText amountInput = dialogView.findViewById(R.id.amountInput);
-        EditText descriptionInput = dialogView.findViewById(R.id.descriptionInput);
-        RadioButton expenseRadio = dialogView.findViewById(R.id.expenseRadio);
-        RadioButton incomeRadio = dialogView.findViewById(R.id.incomeRadio);
-        Spinner categorySpinner = dialogView.findViewById(R.id.categorySpinner);
-        Button addImageButton = dialogView.findViewById(R.id.addImageButton);
-        LinearLayout imagesContainer = dialogView.findViewById(R.id.imagesContainer);
-
-        String[] categories = {"Food", "Transport", "Shopping", "Bills", "Salary", "Other"};
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, categories);
+        // Setup category spinner
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
+                this,
+                R.array.categories,
+                android.R.layout.simple_spinner_item
+        );
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        categorySpinner.setAdapter(spinnerAdapter);
+        dialogBinding.categorySpinner.setAdapter(spinnerAdapter);
 
         selectedImages.clear();
 
-        addImageButton.setOnClickListener(v -> {
-            checkPermissionAndPickImage();
-        });
+        dialogBinding.addImageButton.setOnClickListener(v -> checkPermissionAndPickImage());
 
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            String amountStr = amountInput.getText().toString();
-            String description = descriptionInput.getText().toString();
-            String category = categorySpinner.getSelectedItem().toString();
+        builder.setPositiveButton(R.string.add_button, (dialog, which) -> {
+            String amountStr = dialogBinding.amountInput.getText().toString();
+            String description = dialogBinding.descriptionInput.getText().toString();
+            String category = dialogBinding.categorySpinner.getSelectedItem().toString();
 
             if (amountStr.isEmpty() || description.isEmpty()) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.fill_all_fields, Toast.LENGTH_SHORT).show();
                 return;
             }
 
             double amount = Double.parseDouble(amountStr);
-            if (expenseRadio.isChecked()) {
+            if (dialogBinding.expenseRadio.isChecked()) {
                 amount = -Math.abs(amount);
             } else {
                 amount = Math.abs(amount);
@@ -156,10 +138,10 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
             loadTransactions();
             updateBalance();
 
-            Toast.makeText(this, "Transaction added", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.transaction_added, Toast.LENGTH_SHORT).show();
         });
 
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(R.string.cancel_button, null);
         builder.create().show();
     }
 
@@ -217,43 +199,48 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
         double balance = dbHelper.getTotalBalance();
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("he", "IL"));
         currencyFormat.setCurrency(java.util.Currency.getInstance("ILS"));
-        balanceText.setText(currencyFormat.format(balance));
+        binding.balanceText.setText(currencyFormat.format(balance));
 
         if (balance < 0) {
-            balanceText.setTextColor(Color.parseColor("#F44336"));
+            binding.balanceText.setTextColor(Color.parseColor("#F44336"));
         } else {
-            balanceText.setTextColor(Color.parseColor("#4CAF50"));
+            binding.balanceText.setTextColor(Color.parseColor("#4CAF50"));
         }
     }
 
     @Override
     public void onDeleteClick(Transaction transaction) {
         new AlertDialog.Builder(this)
-                .setTitle("Delete Transaction")
-                .setMessage("Are you sure you want to delete this transaction?")
-                .setPositiveButton("Delete", (dialog, which) -> {
+                .setTitle(R.string.delete_transaction_title)
+                .setMessage(R.string.delete_transaction_message)
+                .setPositiveButton(R.string.delete_confirm, (dialog, which) -> {
                     dbHelper.deleteTransaction(transaction.getId());
                     loadTransactions();
                     updateBalance();
-                    Toast.makeText(this, "Transaction deleted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.transaction_deleted, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_button, null)
                 .show();
     }
 
     @Override
     public void onItemClick(Transaction transaction) {
-        // Show transaction details
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Transaction Details");
+        builder.setTitle(R.string.transaction_details_title);
 
-        String message = "Description: " + transaction.getDescription() + "\n" +
-                "Category: " + transaction.getCategory() + "\n" +
-                "Amount: " + transaction.getAmount() + " ₪\n" +
-                "Date: " + transaction.getDate().toString();
+        String message = getString(R.string.detail_description, transaction.getDescription()) + "\n" +
+                getString(R.string.detail_category, transaction.getCategory()) + "\n" +
+                getString(R.string.detail_amount, String.valueOf(transaction.getAmount())) + "\n" +
+                getString(R.string.detail_date, transaction.getDate().toString());
 
         builder.setMessage(message);
-        builder.setPositiveButton("OK", null);
+        builder.setPositiveButton(R.string.ok_button, null);
         builder.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        binding = null;
     }
 }

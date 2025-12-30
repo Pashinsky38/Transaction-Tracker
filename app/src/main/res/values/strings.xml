@@ -1,3 +1,57 @@
 <resources>
     <string name="app_name">Transaction Tracker</string>
+
+    <!-- Main Activity -->
+    <string name="current_balance">Current Balance</string>
+    <string name="recent_transactions">Recent Transactions</string>
+    <string name="add_transaction">Add Transaction</string>
+
+    <!-- Add Transaction Dialog -->
+    <string name="add_transaction_title">Add Transaction</string>
+    <string name="type_label">Type</string>
+    <string name="expense">Expense</string>
+    <string name="income">Income</string>
+    <string name="amount_hint">Amount (₪)</string>
+    <string name="description_hint">Description</string>
+    <string name="category_label">Category</string>
+    <string name="add_receipt_image">Add Receipt/Image</string>
+    <string name="add_button">Add</string>
+    <string name="cancel_button">Cancel</string>
+
+    <!-- Categories -->
+    <string-array name="categories">
+        <item>Food</item>
+        <item>Transport</item>
+        <item>Shopping</item>
+        <item>Bills</item>
+        <item>Salary</item>
+        <item>Other</item>
+    </string-array>
+
+    <!-- Transaction Item -->
+    <string name="delete_button">Delete</string>
+    <string name="image_indicator">📷 %1$d</string>
+
+    <!-- Messages -->
+    <string name="fill_all_fields">Please fill all fields</string>
+    <string name="transaction_added">Transaction added</string>
+    <string name="transaction_deleted">Transaction deleted</string>
+    <string name="permission_denied">Permission denied</string>
+
+    <!-- Delete Dialog -->
+    <string name="delete_transaction_title">Delete Transaction</string>
+    <string name="delete_transaction_message">Are you sure you want to delete this transaction?</string>
+    <string name="delete_confirm">Delete</string>
+
+    <!-- Transaction Details Dialog -->
+    <string name="transaction_details_title">Transaction Details</string>
+    <string name="detail_description">Description: %1$s</string>
+    <string name="detail_category">Category: %1$s</string>
+    <string name="detail_amount">Amount: %1$s ₪</string>
+    <string name="detail_date">Date: %1$s</string>
+    <string name="ok_button">OK</string>
+
+    <!-- Currency -->
+    <string name="currency_format">₪%1$.2f</string>
+    <string name="balance_format">₪%1$.2f</string>
 </resources>
