@@ -30,6 +30,7 @@ import com.example.transactiontracker.databinding.DialogAddTransactionBinding;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -42,6 +43,10 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
     private List<Uri> selectedImages;
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
+
+    private Calendar currentMonth;
+    private SimpleDateFormat monthFormat;
+    private NumberFormat currencyFormat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,11 +75,17 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
         dbHelper = new DatabaseHelper(this);
         selectedImages = new ArrayList<>();
 
+        // Initialize current month to current date
+        currentMonth = Calendar.getInstance();
+        monthFormat = new SimpleDateFormat("MMM yyyy", Locale.getDefault());
+        currencyFormat = NumberFormat.getCurrencyInstance(new Locale("he", "IL"));
+        currencyFormat.setCurrency(java.util.Currency.getInstance("ILS"));
+
         setupPermissionLauncher();
         setupImagePickerLauncher();
         initViews();
-        loadTransactions();
-        updateBalance();
+        updateMonthDisplay();
+        loadMonthTransactions();
     }
 
     private void setupPermissionLauncher() {
@@ -110,6 +121,48 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
         binding.recyclerView.setAdapter(adapter);
 
         binding.fabAdd.setOnClickListener(v -> showAddTransactionDialog());
+
+        // Month navigation buttons
+        binding.previousMonthButton.setOnClickListener(v -> {
+            currentMonth.add(Calendar.MONTH, -1);
+            updateMonthDisplay();
+            loadMonthTransactions();
+        });
+
+        binding.nextMonthButton.setOnClickListener(v -> {
+            currentMonth.add(Calendar.MONTH, 1);
+            updateMonthDisplay();
+            loadMonthTransactions();
+        });
+    }
+
+    private void updateMonthDisplay() {
+        String monthStr = monthFormat.format(currentMonth.getTime());
+        binding.currentMonthText.setText(monthStr);
+
+        // Update statistics
+        double income = dbHelper.getIncomeForMonth(monthStr);
+        double expenses = dbHelper.getExpensesForMonth(monthStr);
+        double profitLoss = income + expenses; // expenses are negative
+
+        binding.incomeText.setText(currencyFormat.format(income));
+        binding.expensesText.setText(currencyFormat.format(Math.abs(expenses)));
+        binding.profitLossText.setText(currencyFormat.format(profitLoss));
+
+        // Color profit/loss based on value
+        if (profitLoss < 0) {
+            binding.profitLossText.setTextColor(Color.parseColor("#F44336")); // Red
+        } else if (profitLoss > 0) {
+            binding.profitLossText.setTextColor(Color.parseColor("#4CAF50")); // Green
+        } else {
+            binding.profitLossText.setTextColor(Color.parseColor("#757575")); // Gray
+        }
+    }
+
+    private void loadMonthTransactions() {
+        String monthStr = monthFormat.format(currentMonth.getTime());
+        List<Transaction> transactions = dbHelper.getTransactionsByMonth(monthStr);
+        adapter.updateTransactions(transactions);
     }
 
     private void showAddTransactionDialog() {
@@ -209,9 +262,16 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
             }
 
             dbHelper.addTransaction(transaction);
-            loadTransactions();
-            updateBalance();
 
+            // Check if the added transaction is in the current displayed month
+            String transactionMonth = monthFormat.format(transaction.getDate());
+            String displayedMonth = monthFormat.format(currentMonth.getTime());
+
+            if (transactionMonth.equals(displayedMonth)) {
+                loadMonthTransactions();
+            }
+
+            updateMonthDisplay();
             Toast.makeText(this, R.string.transaction_added, Toast.LENGTH_SHORT).show();
         });
 
@@ -264,24 +324,6 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
         }
     }
 
-    private void loadTransactions() {
-        List<Transaction> transactions = dbHelper.getAllTransactions();
-        adapter.updateTransactions(transactions);
-    }
-
-    private void updateBalance() {
-        double balance = dbHelper.getTotalBalance();
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("he", "IL"));
-        currencyFormat.setCurrency(java.util.Currency.getInstance("ILS"));
-        binding.balanceText.setText(currencyFormat.format(balance));
-
-        if (balance < 0) {
-            binding.balanceText.setTextColor(Color.parseColor("#F44336"));
-        } else {
-            binding.balanceText.setTextColor(Color.parseColor("#4CAF50"));
-        }
-    }
-
     @Override
     public void onDeleteClick(Transaction transaction) {
         new AlertDialog.Builder(this)
@@ -289,8 +331,8 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
                 .setMessage(R.string.delete_transaction_message)
                 .setPositiveButton(R.string.delete_confirm, (dialog, which) -> {
                     dbHelper.deleteTransaction(transaction.getId());
-                    loadTransactions();
-                    updateBalance();
+                    loadMonthTransactions();
+                    updateMonthDisplay();
                     Toast.makeText(this, R.string.transaction_deleted, Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel_button, null)
