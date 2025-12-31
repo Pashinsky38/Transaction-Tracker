@@ -21,6 +21,7 @@
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="layoutDirection|locale"
+            android:screenOrientation="portrait"
             tools:targetApi="jelly_bean_mr1">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
