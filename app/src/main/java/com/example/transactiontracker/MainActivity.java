@@ -12,8 +12,8 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.NumberPicker;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -22,7 +22,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.transactiontracker.databinding.ActivityMainBinding;
@@ -32,6 +31,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
@@ -130,6 +130,44 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
 
         selectedImages.clear();
 
+        // Get current date and time
+        Calendar calendar = Calendar.getInstance();
+
+        // Setup Hour Picker (0-23)
+        NumberPicker hourPicker = dialogBinding.hourPicker;
+        hourPicker.setMinValue(0);
+        hourPicker.setMaxValue(23);
+        hourPicker.setValue(calendar.get(Calendar.HOUR_OF_DAY));
+        hourPicker.setFormatter(value -> String.format(Locale.getDefault(), "%02d", value));
+
+        // Setup Minute Picker (0-59)
+        NumberPicker minutePicker = dialogBinding.minutePicker;
+        minutePicker.setMinValue(0);
+        minutePicker.setMaxValue(59);
+        minutePicker.setValue(calendar.get(Calendar.MINUTE));
+        minutePicker.setFormatter(value -> String.format(Locale.getDefault(), "%02d", value));
+
+        // Setup Day Picker (1-31)
+        NumberPicker dayPicker = dialogBinding.dayPicker;
+        dayPicker.setMinValue(1);
+        dayPicker.setMaxValue(31);
+        dayPicker.setValue(calendar.get(Calendar.DAY_OF_MONTH));
+        dayPicker.setFormatter(value -> String.format(Locale.getDefault(), "%02d", value));
+
+        // Setup Month Picker (1-12)
+        NumberPicker monthPicker = dialogBinding.monthPicker;
+        monthPicker.setMinValue(1);
+        monthPicker.setMaxValue(12);
+        monthPicker.setValue(calendar.get(Calendar.MONTH) + 1); // Calendar.MONTH is 0-based
+        monthPicker.setFormatter(value -> String.format(Locale.getDefault(), "%02d", value));
+
+        // Setup Year Picker (current year - 10 to current year + 10)
+        NumberPicker yearPicker = dialogBinding.yearPicker;
+        int currentYear = calendar.get(Calendar.YEAR);
+        yearPicker.setMinValue(currentYear - 10);
+        yearPicker.setMaxValue(currentYear + 10);
+        yearPicker.setValue(currentYear);
+
         dialogBinding.addImageButton.setOnClickListener(v -> checkPermissionAndPickImage());
 
         builder.setPositiveButton(R.string.add_button, (dialog, which) -> {
@@ -150,6 +188,18 @@ public class MainActivity extends AppCompatActivity implements TransactionAdapte
             }
 
             Transaction transaction = new Transaction(amount, description, category);
+
+            // Set the selected date and time
+            Calendar selectedCalendar = Calendar.getInstance();
+            selectedCalendar.set(Calendar.YEAR, yearPicker.getValue());
+            selectedCalendar.set(Calendar.MONTH, monthPicker.getValue() - 1); // Calendar.MONTH is 0-based
+            selectedCalendar.set(Calendar.DAY_OF_MONTH, dayPicker.getValue());
+            selectedCalendar.set(Calendar.HOUR_OF_DAY, hourPicker.getValue());
+            selectedCalendar.set(Calendar.MINUTE, minutePicker.getValue());
+            selectedCalendar.set(Calendar.SECOND, 0);
+            selectedCalendar.set(Calendar.MILLISECOND, 0);
+
+            transaction.setDate(selectedCalendar.getTime());
 
             for (Uri imageUri : selectedImages) {
                 String savedPath = saveImageToInternalStorage(imageUri);
